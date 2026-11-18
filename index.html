@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      // Vite HMR is disabled in AI Studio iFrame environment; handle 'vite-hmr' safely
+      (function() {
+        if (typeof window !== 'undefined' && window.WebSocket) {
+          var OrigWebSocket = window.WebSocket;
+          window.WebSocket = function(url, protocols) {
+            if (protocols === 'vite-hmr' || (typeof protocols === 'string' && protocols.indexOf('vite') !== -1)) {
+              var dummy = new EventTarget();
+              dummy.readyState = 1;
+              dummy.send = function() {};
+              dummy.close = function() {};
+              setTimeout(function() {
+                dummy.dispatchEvent(new Event('open'));
+              }, 0);
+              return dummy;
+            }
+            return new OrigWebSocket(url, protocols);
+          };
+          window.WebSocket.prototype = OrigWebSocket.prototype;
+          window.WebSocket.CONNECTING = OrigWebSocket.CONNECTING;
+          window.WebSocket.OPEN = OrigWebSocket.OPEN;
+          window.WebSocket.CLOSING = OrigWebSocket.CLOSING;
+          window.WebSocket.CLOSED = OrigWebSocket.CLOSED;
+        }
+        window.addEventListener('unhandledrejection', function(event) {
+          var msg = String((event && event.reason && event.reason.message) || (event && event.reason) || '');
+          if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('vite') !== -1) {
+            event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+          }
+        }, true);
+        window.addEventListener('error', function(event) {
+          var msg = String((event && event.message) || '');
+          var file = String((event && event.filename) || '');
+          if (file.indexOf('@vite/client') !== -1 || msg.indexOf('WebSocket') !== -1) {
+            event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+          }
+        }, true);
+      })();
+    </script>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dr. T - Autonomous AI, Living Library Commons & x402 Algorand MainNet</title>
+    <meta name="description" content="Autonomous AI & Health Intelligence Platform featuring Dr. T Cinema, Trib-House Living Library Commons, and x402 Pay-Per-Request Service on Algorand MainNet with GoPlausible Facilitator, Bazaar Discovery, and Global x402 Challenge qualification." />
+    <meta name="keywords" content="Dr. T, Memory Lantern, Three Hats, StreetVendorsMap, Gánh Mưu Sinh, Autonomous AI, Health Intelligence, x402 Algorand MainNet, GoPlausible, Living Library" />
+    <meta name="author" content="Dr. T Platform" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Dr. T" />
+    <meta property="og:title" content="Dr. T - Autonomous AI, Living Library Commons & x402 Algorand MainNet" />
+    <meta property="og:description" content="Autonomous AI & Health Intelligence Platform featuring Dr. T Cinema, Trib-House Living Library Commons, and x402 Pay-Per-Request Service on Algorand MainNet with GoPlausible Facilitator, Bazaar Discovery, and Global x402 Challenge qualification." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Dr. T - Autonomous AI, Living Library Commons & x402 Algorand MainNet" />
+    <meta name="twitter:description" content="Autonomous AI & Health Intelligence Platform featuring Dr. T Cinema, Trib-House Living Library Commons, and x402 Pay-Per-Request Service on Algorand MainNet with GoPlausible Facilitator, Bazaar Discovery, and Global x402 Challenge qualification." />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Dr. T",
+        "description": "Autonomous AI & Health Intelligence Platform featuring Dr. T Cinema, Trib-House Living Library Commons, Memory Lantern, Three Hats, and StreetVendorsMap on Algorand MainNet.",
+        "applicationCategory": "HealthApplication, LifestyleApplication, BusinessApplication",
+        "operatingSystem": "Web Browser",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-slate-950 text-slate-100 antialiased font-sans selection:bg-rose-500 selection:text-white min-h-screen">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

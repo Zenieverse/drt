@@ -1,0 +1,296 @@
+{
+  "entities": {
+    "UserProfile": {
+      "collection": "users",
+      "fields": {
+        "userId": { "type": "string", "description": "Unique user ID" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "email": { "type": "string", "description": "User email address" },
+        "language": { "type": "string", "description": "Preferred interface language" },
+        "persona": { "type": "string", "description": "Selected Dr. T persona" },
+        "createdAt": { "type": "timestamp", "description": "Account creation timestamp" },
+        "updatedAt": { "type": "timestamp", "description": "Last update timestamp" }
+      }
+    },
+    "HealthRecord": {
+      "collection": "healthRecords",
+      "fields": {
+        "userId": { "type": "string", "description": "User ID who owns this record" },
+        "type": { "type": "string", "description": "Type of record: symptom, lab, medication, wearable, encounter" },
+        "title": { "type": "string", "description": "Record title or test name" },
+        "value": { "type": "string", "description": "Quantitative value or qualitative summary" },
+        "unit": { "type": "string", "description": "Unit of measurement if applicable" },
+        "category": { "type": "string", "description": "Biomedical category" },
+        "severity": { "type": "string", "description": "Severity rating: normal, mild, moderate, severe" },
+        "timestamp": { "type": "timestamp", "description": "Date/time of event or measurement" },
+        "notes": { "type": "string", "description": "Additional clinical observations or context" }
+      }
+    },
+    "ConsultationSession": {
+      "collection": "consultations",
+      "fields": {
+        "userId": { "type": "string", "description": "User ID" },
+        "title": { "type": "string", "description": "Consultation topic / chief complaint" },
+        "triageTier": { "type": "string", "description": "GREEN, YELLOW, ORANGE, or RED" },
+        "messagesCount": { "type": "number", "description": "Number of exchanged messages" },
+        "soapSummary": { "type": "object", "description": "Structured SOAP note object" },
+        "createdAt": { "type": "timestamp", "description": "Session start timestamp" },
+        "updatedAt": { "type": "timestamp", "description": "Last updated timestamp" }
+      }
+    },
+    "SkinAnalysisRecord": {
+      "collection": "skinAnalyses",
+      "fields": {
+        "userId": { "type": "string", "description": "User ID" },
+        "overallScore": { "type": "number", "description": "Composite skin score (0-100)" },
+        "hydrationLevel": { "type": "number", "description": "Hydration percentage" },
+        "barrierIntegrity": { "type": "number", "description": "Dermal barrier score" },
+        "concerns": { "type": "array", "description": "Detected clinical/cosmetic concerns" },
+        "recommendations": { "type": "array", "description": "Personalized active regimens" },
+        "timestamp": { "type": "timestamp", "description": "Analysis timestamp" }
+      }
+    },
+    "CloudAuditLog": {
+      "collection": "cloudAuditLogs",
+      "fields": {
+        "service": { "type": "string", "description": "Google Cloud service (Firestore, Cloud Run, PubSub)" },
+        "event": { "type": "string", "description": "Event description" },
+        "status": { "type": "string", "description": "SUCCESS, INFO, WARNING, ERROR" },
+        "latencyMs": { "type": "number", "description": "Request latency in ms" },
+        "timestamp": { "type": "timestamp", "description": "Log timestamp" }
+      }
+    },
+    "MicroBizPost": {
+      "collection": "microbiz_posts",
+      "fields": {
+        "id": { "type": "string", "description": "Post identifier" },
+        "authorId": { "type": "string", "description": "User ID of post author" },
+        "authorName": { "type": "string", "description": "Author name" },
+        "authorRole": { "type": "string", "description": "Creator, Learner, Mentor, Business" },
+        "content": { "type": "string", "description": "Post body text" },
+        "category": { "type": "string", "description": "Learning, Story, Showcase, Question" },
+        "tags": { "type": "array", "description": "Topic and skill tags" },
+        "reactions": { "type": "object", "description": "Reaction counts" },
+        "commentsCount": { "type": "number", "description": "Total comments" },
+        "createdAt": { "type": "timestamp", "description": "Post timestamp" }
+      }
+    },
+    "MicroBizCourse": {
+      "collection": "microbiz_courses",
+      "fields": {
+        "id": { "type": "string", "description": "Course identifier" },
+        "title": { "type": "string", "description": "Course title" },
+        "creatorId": { "type": "string", "description": "Creator author ID" },
+        "category": { "type": "string", "description": "Skill domain" },
+        "level": { "type": "string", "description": "Beginner, Intermediate, Advanced" },
+        "modules": { "type": "array", "description": "Curriculum modules and lessons" },
+        "published": { "type": "boolean", "description": "Publication state" },
+        "enrolledCount": { "type": "number", "description": "Student enrollments" }
+      }
+    },
+    "MicroBizBusiness": {
+      "collection": "microbiz_businesses",
+      "fields": {
+        "id": { "type": "string", "description": "Business profile ID" },
+        "ownerId": { "type": "string", "description": "Owner user ID" },
+        "name": { "type": "string", "description": "Microbusiness name" },
+        "category": { "type": "string", "description": "Crafts, Services, Culinary, Tech, Wellness" },
+        "tagline": { "type": "string", "description": "Short bio or value prop" },
+        "listings": { "type": "array", "description": "Products and services" },
+        "inquiriesCount": { "type": "number", "description": "Inquiries received" }
+      }
+    },
+    "MicroBizFinance": {
+      "collection": "microbiz_finances",
+      "fields": {
+        "id": { "type": "string", "description": "Transaction/Invoice record ID" },
+        "userId": { "type": "string", "description": "Microbusiness owner ID" },
+        "type": { "type": "string", "description": "income, expense, invoice, quote" },
+        "amount": { "type": "number", "description": "Amount in currency" },
+        "category": { "type": "string", "description": "Cost or revenue category" },
+        "date": { "type": "string", "description": "ISO date" },
+        "description": { "type": "string", "description": "Details or line items" }
+      }
+    },
+    "MemoryLanternItem": {
+      "collection": "memory_lantern_memories",
+      "fields": {
+        "id": { "type": "string", "description": "Memory unique ID" },
+        "userId": { "type": "string", "description": "User identifier who owns the memory" },
+        "title": { "type": "string", "description": "Title of the memory" },
+        "story": { "type": "string", "description": "Narrative story or recollection text" },
+        "category": { "type": "string", "description": "Memory category or theme" },
+        "lanternColor": { "type": "string", "description": "Color theme" },
+        "isSample": { "type": "boolean", "description": "Flag for public template sample" },
+        "createdAt": { "type": "timestamp", "description": "Creation timestamp" }
+      }
+    },
+    "LanternKeeperAction": {
+      "collection": "lantern_keeper_actions",
+      "fields": {
+        "id": { "type": "string", "description": "Action unique ID" },
+        "userId": { "type": "string", "description": "User who authorized the action" },
+        "actionType": { "type": "string", "description": "Tool or skill executed" },
+        "status": { "type": "string", "description": "APPROVED, REJECTED, EXECUTED" },
+        "timestamp": { "type": "timestamp", "description": "Action timestamp" }
+      }
+    },
+    "ThreeHatsRole": {
+      "collection": "three_hats_roles",
+      "fields": {
+        "id": { "type": "string", "description": "Unique role ID" },
+        "userId": { "type": "string", "description": "User ID who owns this role" },
+        "name": { "type": "string", "description": "Name of the role" },
+        "description": { "type": "string", "description": "Description of the role" },
+        "category": { "type": "string", "description": "Role category" },
+        "hatIds": { "type": "array", "description": "List of associated hats: professional, personal, social" },
+        "status": { "type": "string", "description": "current, occasional, aspirational, paused, completed" },
+        "importance": { "type": "string", "description": "core, high, moderate, low" },
+        "energyLevel": { "type": "string", "description": "energizing, neutral, draining" },
+        "timeDemand": { "type": "string", "description": "Estimated time requirement" },
+        "values": { "type": "array", "description": "Personal values expressed by this role" },
+        "commitments": { "type": "array", "description": "Specific commitments tied to this role" },
+        "createdAt": { "type": "string", "description": "ISO creation timestamp" },
+        "updatedAt": { "type": "string", "description": "ISO last update timestamp" }
+      }
+    },
+    "ThreeHatsCommitment": {
+      "collection": "three_hats_commitments",
+      "fields": {
+        "id": { "type": "string", "description": "Unique commitment ID" },
+        "userId": { "type": "string", "description": "User ID who owns this commitment" },
+        "roleId": { "type": "string", "description": "Parent role ID" },
+        "roleName": { "type": "string", "description": "Parent role name" },
+        "hatId": { "type": "string", "description": "Hat ID: professional, personal, social" },
+        "title": { "type": "string", "description": "Commitment title" },
+        "targetDate": { "type": "string", "description": "Target date or frequency" },
+        "priority": { "type": "string", "description": "high, medium, low" },
+        "status": { "type": "string", "description": "planned, in_progress, completed, paused" },
+        "personalValue": { "type": "string", "description": "Guiding personal value" },
+        "nextAction": { "type": "string", "description": "Concrete next action" },
+        "createdAt": { "type": "string", "description": "ISO creation timestamp" },
+        "updatedAt": { "type": "string", "description": "ISO last update timestamp" }
+      }
+    },
+    "ThreeHatsReflection": {
+      "collection": "three_hats_reflections",
+      "fields": {
+        "id": { "type": "string", "description": "Unique reflection ID" },
+        "userId": { "type": "string", "description": "User ID who owns this reflection" },
+        "weekStartDate": { "type": "string", "description": "Start date for reflection week" },
+        "step1_meaningful": { "type": "string", "description": "What felt meaningful" },
+        "step2_attentionReview": { "type": "string", "description": "Attention review" },
+        "step3_conflictsNoticed": { "type": "string", "description": "Conflicts noticed" },
+        "step4_appreciations": { "type": "string", "description": "Appreciations" },
+        "step5_realisticAdjustment": { "type": "string", "description": "Realistic adjustment" },
+        "step6_committedActions": { "type": "array", "description": "Committed actions" },
+        "perspectives": { "type": "object", "description": "3-perspective scores" },
+        "savedToLanternKeeper": { "type": "boolean", "description": "Whether exported to memory sanctuary" },
+        "createdAt": { "type": "string", "description": "ISO creation timestamp" }
+      }
+    },
+    "GatherGlowEvent": {
+      "collection": "gather_and_glow_events",
+      "fields": {
+        "id": { "type": "string", "description": "Unique celebration ID" },
+        "userId": { "type": "string", "description": "User ID who owns this celebration" },
+        "title": { "type": "string", "description": "Celebration title" },
+        "eventType": { "type": "string", "description": "wedding, anniversary, birthday, family_celebration, community_gathering, etc." },
+        "date": { "type": "string", "description": "Event date (YYYY-MM-DD)" },
+        "time": { "type": "string", "description": "Event start time (HH:mm)" },
+        "location": { "type": "string", "description": "Venue, address or city" },
+        "expectedGuests": { "type": "number", "description": "Estimated guest count" },
+        "currency": { "type": "string", "description": "Currency code (USD, VND, EUR, etc.)" },
+        "totalBudget": { "type": "number", "description": "Total target budget ceiling" },
+        "themeStyle": { "type": "string", "description": "Style and atmosphere preferences" },
+        "dietaryNeeds": { "type": "array", "description": "Dietary requirements to accommodate" },
+        "accessibilityNeeds": { "type": "array", "description": "Accessibility and elder care considerations" },
+        "culturalPreferences": { "type": "string", "description": "Cultural traditions or ancestral rites" },
+        "planningStage": { "type": "string", "description": "Current planning milestone stage" },
+        "priorities": { "type": "array", "description": "Core host priorities" },
+        "notes": { "type": "string", "description": "Special wishes and notes" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "description": "Last updated timestamp" }
+      }
+    },
+    "PopulationParticipant": {
+      "collection": "population_participants",
+      "fields": {
+        "id": { "type": "string", "description": "Pseudonymous participant ID" },
+        "userId": { "type": "string", "description": "Authorized steward UID" },
+        "syntheticCode": { "type": "string", "description": "De-identified cohort code" },
+        "cohort": { "type": "string", "description": "Blood Health | Cardiometabolic Health | Maternal Health" },
+        "region": { "type": "string", "description": "Community clinic or catchment region" },
+        "consentStatus": { "type": "string", "description": "ACTIVE | REVOKED | PENDING | EXPIRED" },
+        "riskTier": { "type": "string", "description": "ROUTINE | MONITOR | ELEVATED | PRIORITY_FOLLOWUP" },
+        "createdAt": { "type": "string", "description": "ISO timestamp" }
+      }
+    },
+    "PopulationConsent": {
+      "collection": "population_consents",
+      "fields": {
+        "id": { "type": "string", "description": "Consent record ID" },
+        "userId": { "type": "string", "description": "Authorized steward UID" },
+        "participantId": { "type": "string", "description": "Pseudonymous participant ID" },
+        "status": { "type": "string", "description": "ACTIVE | REVOKED | PENDING | EXPIRED" },
+        "scopes": { "type": "array", "description": "Approved processing scopes" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp" }
+      }
+    },
+    "PopulationObservation": {
+      "collection": "population_observations",
+      "fields": {
+        "id": { "type": "string", "description": "Observation ID" },
+        "userId": { "type": "string", "description": "Authorized steward UID" },
+        "participantId": { "type": "string", "description": "Pseudonymous participant ID" },
+        "metricType": { "type": "string", "description": "Standardized biometric or screening metric" },
+        "qualityFlag": { "type": "string", "description": "VALID | OUTLIER_FLAGGED | STALE | MISSING_UNIT" },
+        "dataOrigin": { "type": "string", "description": "LIVE | IMPORTED | SIMULATED | UNAVAILABLE" },
+        "recordedAt": { "type": "string", "description": "ISO timestamp" }
+      }
+    },
+    "PopulationAlert": {
+      "collection": "population_alerts",
+      "fields": {
+        "id": { "type": "string", "description": "Alert ID" },
+        "userId": { "type": "string", "description": "Authorized steward UID" },
+        "category": { "type": "string", "description": "POPULATION_TREND | CLINICAL_REVIEW | OPERATIONAL_BOTTLENECK" },
+        "severity": { "type": "string", "description": "INFO | WATCH | URGENT_REVIEW" },
+        "status": { "type": "string", "description": "OPEN | ACKNOWLEDGED | ESCALATED | RESOLVED" },
+        "createdAt": { "type": "string", "description": "ISO timestamp" }
+      }
+    },
+    "PopulationProgramme": {
+      "collection": "population_programmes",
+      "fields": {
+        "id": { "type": "string", "description": "Programme ID" },
+        "userId": { "type": "string", "description": "Authorized steward UID" },
+        "name": { "type": "string", "description": "Preventive programme name" },
+        "status": { "type": "string", "description": "ACTIVE | PLANNED | PAUSED" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp" }
+      }
+    },
+    "PopulationReferral": {
+      "collection": "population_referrals",
+      "fields": {
+        "id": { "type": "string", "description": "Referral ID" },
+        "userId": { "type": "string", "description": "Authorized steward UID" },
+        "participantId": { "type": "string", "description": "Pseudonymous participant ID" },
+        "stage": { "type": "string", "description": "6-stage Care Navigation workflow state" },
+        "appointmentStatus": { "type": "string", "description": "Appointment status" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp" }
+      }
+    },
+    "PopulationAuditLog": {
+      "collection": "population_audit_logs",
+      "fields": {
+        "id": { "type": "string", "description": "Audit log ID" },
+        "userId": { "type": "string", "description": "Actor UID" },
+        "actorRole": { "type": "string", "description": "RBAC role at time of action" },
+        "action": { "type": "string", "description": "Audited action" },
+        "outcome": { "type": "string", "description": "ALLOWED | DENIED" },
+        "timestamp": { "type": "string", "description": "ISO timestamp" }
+      }
+    }
+  }
+}

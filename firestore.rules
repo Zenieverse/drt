@@ -1,0 +1,486 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ----------------------------------------------------
+    // GLOBAL SECURITY & AUTHENTICATION HELPERS
+    // ----------------------------------------------------
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Explicit administrator definition (custom claims, server-managed admin doc, or verified admin email)
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'admin' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email_verified == true && request.auth.token.email == 'zenieverse@gmail.com')
+      );
+    }
+
+    // Server-managed admin collection (read-only for admins, no client writes)
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only server-side Firebase Admin SDK can create/modify admins
+    }
+
+    // ----------------------------------------------------
+    // 1. CORE CLINICAL & SENSITIVE HEALTH COLLECTIONS
+    // ZERO PUBLIC ACCESS: Strictly restricted to authenticated owner or verified clinician/admin
+    // ----------------------------------------------------
+
+    // User Accounts & Private Profile Records
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId)
+                    && (!('userId' in request.resource.data) || request.resource.data.userId == userId)
+                    && (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false)
+                    && (!('role' in request.resource.data) || request.resource.data.role != 'admin');
+      allow update: if isOwner(userId)
+                    && (!('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId)
+                    && (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == resource.data.isAdmin)
+                    && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Longitudinal Health Records & Lab Biomarkers
+    match /healthRecords/{recordId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId
+      );
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // Socratic Consultation Sessions & Clinical SOAP Notes
+    match /consultations/{consultationId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        (resource.data.clinicianId != null && resource.data.clinicianId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid || (resource.data.clinicianId != null && resource.data.clinicianId == request.auth.uid) || isAdmin()) &&
+        (!('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId)
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Private Dermal / Skin Health Analyses
+    match /skinAnalyses/{analysisId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Cloud Infrastructure Audit Logs (Immutable, tamper-proof, admin-only read and write)
+    match /cloudAuditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false; // Immutable audit log integrity
+    }
+
+    // ----------------------------------------------------
+    // 2. MICROBIZ SOCIAL LEARNING & LIVELIHOOD PLATFORM
+    // ----------------------------------------------------
+
+    // Private Financial Records & Bookkeeping Ledger
+    // Strictly confidential: Only the creator who owns the record or an administrator can read, update, or delete
+    match /microbiz_finances/{financeId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // MicroBiz PayFlow AI: Invoices & Billing
+    match /microbiz_invoices/{invoiceId} {
+      // Allow read to the business creator, the customer by email, or anyone with public invoice link token
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && (!('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId)) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // MicroBiz PayFlow AI: Authoritative Payment Transactions
+    match /microbiz_transactions/{txnId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // MicroBiz PayFlow AI: Receipts & Business Expenses
+    match /microbiz_expenses/{expenseId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // MicroBiz PayFlow AI: Business Profile & Payment Settings
+    match /microbiz_business_settings/{profileId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() && (
+        (request.resource.data.userId == request.auth.uid) ||
+        profileId == request.auth.uid ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // PayFlow DebtFree: Verified Community Debt Relief Requests
+    match /payflow_debt_requests/{requestId} {
+      // Published requests are transparently viewable; unlisted/drafts are restricted to beneficiary or reviewers
+      allow read: if (resource.data.allowPublicListing == true && resource.data.status != 'DRAFT') ||
+                     (isAuthenticated() && (resource.data.beneficiaryUserId == request.auth.uid || isAdmin()));
+      allow create: if isAuthenticated() && request.resource.data.beneficiaryUserId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.beneficiaryUserId == request.auth.uid && (!('beneficiaryUserId' in request.resource.data) || request.resource.data.beneficiaryUserId == resource.data.beneficiaryUserId)) ||
+        isAdmin()
+      );
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.beneficiaryUserId == request.auth.uid && resource.data.status == 'DRAFT');
+    }
+
+    // PayFlow DebtFree: Supporter Contributions Ledger
+    match /payflow_debt_contributions/{contributionId} {
+      allow read: if true;
+      allow create: if true; // Support anonymous and authenticated contributors
+      allow update, delete: if isAdmin();
+    }
+
+    // PayFlow DebtFree: Official Creditor Settlement Confirmations
+    match /payflow_debt_settlements/{settlementId} {
+      allow read: if true; // Transparent public audit trail for verified creditor payments
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Direct Customer Inquiries & Quotation Proposals
+    // Confidential between customer and artisan storefront owner
+    match /microbiz_inquiries/{inquiryId} {
+      allow read: if isAuthenticated() && (
+        resource.data.businessId == request.auth.uid ||
+        (resource.data.customerId != null && resource.data.customerId == request.auth.uid) ||
+        (resource.data.customerContact != null && request.auth.token.email != null && resource.data.customerContact == request.auth.token.email) ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() && (
+        request.resource.data.customerId == request.auth.uid ||
+        (request.auth.token.email != null && request.resource.data.customerContact == request.auth.token.email)
+      );
+      allow update: if isAuthenticated() && (
+        (resource.data.businessId == request.auth.uid && (!('businessId' in request.resource.data) || request.resource.data.businessId == resource.data.businessId)) ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Abuse & Safety Moderation Reports
+    // Restricted: Only the reporting user can view their submission; only admins can resolve or delete
+    match /microbiz_reports/{reportId} {
+      allow create: if isAuthenticated() && request.resource.data.reporterUserId == request.auth.uid;
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.reporterUserId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    // Community Discovery Posts
+    // Public to view; only verified creator can author; authors can update their content; community can update reactions
+    match /microbiz_posts/{postId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.authorId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.authorId == request.auth.uid && (!('authorId' in request.resource.data) || request.resource.data.authorId == resource.data.authorId)) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions', 'comments', 'sharesCount', 'userReactions']) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+
+    // Educational Courses & Curricula
+    match /microbiz_courses/{courseId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.creatorId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.creatorId == request.auth.uid && request.resource.data.creatorId == resource.data.creatorId) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.creatorId == request.auth.uid || isAdmin());
+    }
+
+    // Course Enrollments, Quizzes & Community Certificates
+    match /microbiz_enrollments/{enrollmentId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // Artisan Storefronts & Maker Profiles
+    match /microbiz_businesses/{businessId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.ownerId == request.auth.uid && request.resource.data.ownerId == resource.data.ownerId) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+
+    // Community Groups & Collaborative Projects
+    match /microbiz_groups/{groupId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.creatorId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.creatorId == request.auth.uid && (!('creatorId' in request.resource.data) || request.resource.data.creatorId == resource.data.creatorId)) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'memberCount', 'activeMembers', 'projectCount']) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.creatorId == request.auth.uid || isAdmin());
+    }
+
+    match /microbiz_projects/{projectId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.creatorId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.creatorId == request.auth.uid && (!('creatorId' in request.resource.data) || request.resource.data.creatorId == resource.data.creatorId)) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['contributors', 'likes', 'tasksCompleted', 'totalTasks']) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.creatorId == request.auth.uid || isAdmin());
+    }
+
+    // MicroBiz Public Maker Profiles
+    match /microbiz_profiles/{profileId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.auth.uid == profileId;
+      allow update: if isAuthenticated() && (request.auth.uid == profileId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // ----------------------------------------------------
+    // BUILD WITH AI — DEVPOST LEARN AI BASICS CHALLENGE PROJECTS
+    // User-isolated project workspaces with administrator audit
+    // ----------------------------------------------------
+    match /buildwithai_projects/{projectId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // ----------------------------------------------------
+    // MEMORY LANTERN & LANTERN KEEPER (PERSONAL AI CORE)
+    // Strictly user-isolated personal memory sanctuary & permission audit
+    // ----------------------------------------------------
+    match /memory_lantern_memories/{memoryId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /lantern_keeper_actions/{actionId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if false; // Immutable audit log
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // ----------------------------------------------------
+    // THREE HATS — PROFESSIONAL, PERSONAL & SOCIAL ROLE MAPPING
+    // Strictly user-isolated life-balance records
+    // ----------------------------------------------------
+    match /three_hats_roles/{roleId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /three_hats_commitments/{commitmentId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /three_hats_reflections/{reflectionId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // ----------------------------------------------------
+    // GATHER & GLOW — AI EVENT PLANNING ASSISTANT
+    // User-isolated celebration records with collaborator permissions & guest privacy
+    // ----------------------------------------------------
+    match /gather_and_glow_events/{eventId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || 
+        (resource.data.collaborators != null && request.auth.uid in resource.data.collaborators) || 
+        isAdmin()
+      );
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId) ||
+        (resource.data.collaborators != null && request.auth.uid in resource.data.collaborators && request.resource.data.userId == resource.data.userId) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // ----------------------------------------------------
+    // STREET VENDORS MAP — GÁNH MƯU SINH & REALTIME CONTRIBUTIONS
+    // Public discovery of elder street vendors and community contributions
+    // ----------------------------------------------------
+    match /street_vendor_contributions/{vendorId} {
+      allow read: if true;
+      allow create: if true; // Any community patron can nominate or sync a street vendor
+      allow update: if true; // Allows live likes counter, verification votes, and status updates
+      allow delete: if isAdmin();
+    }
+
+    // ----------------------------------------------------
+    // PRESAGE SENSE — CAMERA-POWERED WELLNESS SESSIONS
+    // Presage SmartSpectra Challenge 2026
+    // Strictly user-isolated physiological session summaries & subjective check-ins
+    // ----------------------------------------------------
+    match /presage_sense_sessions/{sessionId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId) ||
+        isAdmin()
+      );
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // ----------------------------------------------------
+    // BUILDARENA S02 — MISSION CONTROL EXPERIMENTS
+    // Human-AI Engineering Challenge 2026: Deliver. Separate. Return.
+    // Public transparency for competition audit & scoring logs
+    // ----------------------------------------------------
+    match /buildarena_experiments/{experimentId} {
+      allow read: if true;
+      allow create: if isAuthenticated() || isAdmin();
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // ----------------------------------------------------
+    // COMMUNITY HEALTH SIGNAL INTELLIGENCE (FUTURE HEALTH 2026)
+    // Role-based access, owner isolation, and immutable audit trail
+    // ----------------------------------------------------
+    function hasPopStaffRole() {
+      return isAuthenticated() && (
+        isAdmin() ||
+        request.auth.token.populationRole in [
+          'platform_admin',
+          'programme_manager',
+          'population_health_manager',
+          'clinician',
+          'care_navigator'
+        ]
+      );
+    }
+
+    match /population_participants/{participantId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasPopStaffRole());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId) ||
+        hasPopStaffRole()
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /population_consents/{consentId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasPopStaffRole());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId) ||
+        hasPopStaffRole()
+      );
+      allow delete: if false; // Consent history preserved for compliance
+    }
+
+    match /population_observations/{observationId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasPopStaffRole());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId) ||
+        hasPopStaffRole()
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /population_alerts/{alertId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasPopStaffRole());
+      allow create: if hasPopStaffRole() && request.resource.data.userId == request.auth.uid;
+      allow update: if hasPopStaffRole() && request.resource.data.userId == resource.data.userId;
+      allow delete: if isAdmin();
+    }
+
+    match /population_programmes/{programmeId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasPopStaffRole();
+      allow delete: if isAdmin();
+    }
+
+    match /population_referrals/{referralId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || hasPopStaffRole());
+      allow create: if hasPopStaffRole() && request.resource.data.userId == request.auth.uid;
+      allow update: if hasPopStaffRole() && request.resource.data.userId == resource.data.userId;
+      allow delete: if isAdmin();
+    }
+
+    match /population_audit_logs/{logId} {
+      allow read: if hasPopStaffRole();
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['userId', 'action', 'timestamp']);
+      allow update, delete: if false; // Immutable governance audit trail
+    }
+  }
+}
+
+
